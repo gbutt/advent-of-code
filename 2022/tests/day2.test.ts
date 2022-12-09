@@ -1,5 +1,18 @@
 import fs from "fs/promises";
 
+const EXAMPLE_INPUT = `A Y
+B X
+C Z
+`;
+
+enum Shape {
+  "A" = 1,
+  "B",
+  "C",
+}
+type Column1Type = "A" | "B" | "C";
+type Column2Type = "X" | "Y" | "Z";
+
 // https://adventofcode.com/2022/day/2
 describe("Day 2 - Rock Paper Scissors", () => {
   let input: string;
@@ -7,57 +20,54 @@ describe("Day 2 - Rock Paper Scissors", () => {
     input = (await fs.readFile("tests/inputs/day2.input")).toString();
   });
 
-  it("Example - Part 1", () => {
-    const shapePairs = parseShapePairsPart1(exampleInput);
-    const stats = determineTotalScores(shapePairs);
-    expect(stats.myTotalScore).toBe(15);
+  it("Part 1 - Example", () => {
+    const shapePairs = parseShapePairs(EXAMPLE_INPUT, myShapeStrategyPart1);
+    const myTotalScore = determineTotalScore(shapePairs);
+    expect(myTotalScore).toBe(15);
   });
 
   it("Part 1", () => {
-    const shapePairs = parseShapePairsPart1(input);
-    const stats = determineTotalScores(shapePairs);
-    expect(stats.myTotalScore).toBe(10595);
+    const shapePairs = parseShapePairs(input, myShapeStrategyPart1);
+    const myTotalScore = determineTotalScore(shapePairs);
+    expect(myTotalScore).toBe(10595);
   });
 
-  it("Example - Part 2", () => {
-    const shapePairs = parseShapePairsPart2(exampleInput);
-    const stats = determineTotalScores(shapePairs);
-    expect(stats.myTotalScore).toBe(12);
+  it("Part 2 - Example", () => {
+    const shapePairs = parseShapePairs(EXAMPLE_INPUT, myShapeStrategyPart2);
+    const myTotalScore = determineTotalScore(shapePairs);
+    expect(myTotalScore).toBe(12);
   });
 
   it("Part 2", () => {
-    const shapePairs = parseShapePairsPart2(input);
-    const stats = determineTotalScores(shapePairs);
-    expect(stats.myTotalScore).toBe(9541);
+    const shapePairs = parseShapePairs(input, myShapeStrategyPart2);
+    const myTotalScore = determineTotalScore(shapePairs);
+    expect(myTotalScore).toBe(9541);
   });
 });
 
-enum Shape {
-  "A" = 1,
-  "B",
-  "C",
-}
-type ShapeKey = keyof typeof Shape;
-type MyShapeKey = "X" | "Y" | "Z";
-type DesiredOutcome = "X" | "Y" | "Z";
-
-function parseShapePairsPart1(input: string) {
+function parseShapePairs(
+  input: string,
+  myShapeStrategy: (shape1: Shape, column2: Column2Type) => Shape
+) {
   return input.split("\n").reduce((shapePairs, currentPair) => {
     if (currentPair) {
-      const [theirShapeKey, myShapeKey] = currentPair.split(" ") as [
-        ShapeKey,
-        MyShapeKey
+      const [theirShapeType, column2] = currentPair.split(" ") as [
+        Column1Type,
+        Column2Type
       ];
-      const theirShape = Shape[theirShapeKey];
-      const myShape = determineShapeFromMyShapeKey(myShapeKey);
+      const theirShape = Shape[theirShapeType];
+      const myShape = myShapeStrategy(theirShape, column2);
       shapePairs.push([theirShape, myShape]);
     }
     return shapePairs;
   }, [] as Array<[Shape, Shape]>);
 }
 
-function determineShapeFromMyShapeKey(myShapeKey: MyShapeKey) {
-  switch (myShapeKey) {
+function myShapeStrategyPart1(
+  _theirShape: Shape,
+  myShapeType: Column2Type
+): Shape {
+  switch (myShapeType) {
     case "X":
       return Shape.A;
     case "Y":
@@ -65,60 +75,33 @@ function determineShapeFromMyShapeKey(myShapeKey: MyShapeKey) {
     case "Z":
       return Shape.C;
     default:
-      throw `Unknown myShapeKey ${myShapeKey}`;
+      throw `Unknown myShapeType ${myShapeType}`;
   }
 }
 
-function parseShapePairsPart2(input: string) {
-  return input.split("\n").reduce((shapePairs, currentPair) => {
-    if (currentPair) {
-      const [theirShapeKey, desiredOutcome] = currentPair.split(" ") as [
-        ShapeKey,
-        DesiredOutcome
-      ];
-      const theirShape = Shape[theirShapeKey];
-      const myShape = determineShapeFromDesiredOutcome(
-        theirShape,
-        desiredOutcome
-      );
-      shapePairs.push([theirShape, myShape]);
-    }
-    return shapePairs;
-  }, [] as Array<[Shape, Shape]>);
-}
-
-function determineShapeFromDesiredOutcome(
+function myShapeStrategyPart2(
   theirShape: Shape,
-  desiredOutcome: DesiredOutcome
-) {
-  let myShape: Shape;
+  desiredOutcome: Column2Type
+): Shape {
   switch (desiredOutcome) {
     case "X": // lose - 1=>3, 2=>1, 3=>2
-      myShape = (theirShape - 1) % 3 || 3;
-      break;
+      return ((theirShape - 1) % 3 || 3) as Shape;
     case "Y": // draw - 1=>1, 2=>2, 3=>3
-      myShape = theirShape;
-      break;
+      return theirShape;
     case "Z": // win - 1=>2, 2=>3, 3=>1
-      myShape = (theirShape + 1) % 3 || 3;
-      break;
+      return ((theirShape + 1) % 3 || 3) as Shape;
     default:
       throw `Unknown desiredOutcome ${desiredOutcome}`;
   }
-  return myShape;
 }
 
-function determineTotalScores(shapePairs: Array<[Shape, Shape]>) {
-  return shapePairs.reduce(
-    (stats, [theirShape, myShape]) => {
-      const myOutcomeScore = determineOutcomeScore(theirShape, myShape);
-      stats.myTotalScore += myShape + myOutcomeScore;
-      const theirOutcomeScore = determineOutcomeScore(myShape, theirShape);
-      stats.theirTotalScore += theirShape + theirOutcomeScore;
-      return stats;
-    },
-    { myTotalScore: 0, theirTotalScore: 0 }
-  );
+function determineTotalScore(shapePairs: Array<[Shape, Shape]>) {
+  return shapePairs.reduce((myTotalScore, [theirShape, myShape]) => {
+    const myOutcomeScore = determineOutcomeScore(theirShape, myShape);
+    const myScoreThisHand = myShape + myOutcomeScore;
+    myTotalScore += myScoreThisHand;
+    return myTotalScore;
+  }, 0);
 }
 
 function determineOutcomeScore(theirShape: Shape, myShape: Shape) {
@@ -134,8 +117,3 @@ function determineOutcomeScore(theirShape: Shape, myShape: Shape) {
       throw `Unrecognized input: ${theirShape} ${myShape} ${outcome}`;
   }
 }
-
-const exampleInput = `A Y
-B X
-C Z
-`;
