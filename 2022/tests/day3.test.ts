@@ -74,9 +74,9 @@ function determineCompartmentDuplicates(input: string) {
       );
       const compartmentB = rucksackInventory.slice(rucksackInventoryLength / 2);
       stats.compartments = [compartmentA, compartmentB];
-      const setA = new Set(compartmentA.split(""));
-      const setB = new Set(compartmentB.split(""));
-      const intersection = [...setA].filter((x) => setB.has(x));
+      const setA = compartmentA.split("");
+      const setB = compartmentB.split("");
+      const intersection = setA.filter((x) => setB.includes(x));
       stats.duplicateItemType = intersection[0];
       stats.duplicateItemPriority = determineItemPriority(
         stats.duplicateItemType
@@ -106,11 +106,11 @@ function determineGroupBadges(input: string) {
       // compile stats once group is complete
       if (stats.groupRucksacks.length === GROUP_SIZE) {
         // determine badge
-        const setA = new Set(stats.groupRucksacks[0].split(""));
-        const setB = new Set(stats.groupRucksacks[1].split(""));
-        const setC = new Set(stats.groupRucksacks[2].split(""));
+        const setA = stats.groupRucksacks[0].split("");
+        const setB = stats.groupRucksacks[1].split("");
+        const setC = stats.groupRucksacks[2].split("");
         const intersection = [...setA].filter(
-          (x) => setB.has(x) && setC.has(x)
+          (x) => setB.includes(x) && setC.includes(x)
         );
         stats.groupBadgeItemType = intersection[0];
         stats.groupBadgeItemPriority = determineItemPriority(
