@@ -1,4 +1,5 @@
 import fs from "fs/promises";
+import { range } from "./helpers";
 
 // https://adventofcode.com/2022/day/6
 describe("Day 6 - Tuning Trouble", () => {
@@ -8,40 +9,48 @@ describe("Day 6 - Tuning Trouble", () => {
   });
 
   it("Part 1 - Examples", () => {
-    expect(findMarkerPosition("mjqjpqmgbljsphdztnvjfqwrcgsmlb")).toBe(7);
-    expect(findMarkerPosition("bvwbjplbgvbhsrlpgdmjqwftvncz")).toBe(5);
-    expect(findMarkerPosition("nppdvjthqldpwncqszvftbrmjlhg")).toBe(6);
-    expect(findMarkerPosition("nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg")).toBe(10);
-    expect(findMarkerPosition("zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw")).toBe(11);
+    expect(findMarkerEndPosition("mjqjpqmgbljsphdztnvjfqwrcgsmlb")).toBe(7);
+    expect(findMarkerEndPosition("bvwbjplbgvbhsrlpgdmjqwftvncz")).toBe(5);
+    expect(findMarkerEndPosition("nppdvjthqldpwncqszvftbrmjlhg")).toBe(6);
+    expect(findMarkerEndPosition("nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg")).toBe(10);
+    expect(findMarkerEndPosition("zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw")).toBe(11);
   });
 
   it("Part 1", () => {
-    expect(findMarkerPosition(input)).toBe(1034);
+    expect(findMarkerEndPosition(input)).toBe(1034);
   });
 
   it("Part 2 - Examples", () => {
-    expect(findMarkerPosition("mjqjpqmgbljsphdztnvjfqwrcgsmlb", 14)).toBe(19);
-    expect(findMarkerPosition("bvwbjplbgvbhsrlpgdmjqwftvncz", 14)).toBe(23);
-    expect(findMarkerPosition("nppdvjthqldpwncqszvftbrmjlhg", 14)).toBe(23);
-    expect(findMarkerPosition("nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg", 14)).toBe(
+    expect(findMarkerEndPosition("mjqjpqmgbljsphdztnvjfqwrcgsmlb", 14)).toBe(
+      19
+    );
+    expect(findMarkerEndPosition("bvwbjplbgvbhsrlpgdmjqwftvncz", 14)).toBe(23);
+    expect(findMarkerEndPosition("nppdvjthqldpwncqszvftbrmjlhg", 14)).toBe(23);
+    expect(findMarkerEndPosition("zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw", 14)).toBe(
+      26
+    );
+    expect(findMarkerEndPosition("nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg", 14)).toBe(
       29
     );
-    expect(findMarkerPosition("zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw", 14)).toBe(26);
+    expect(findMarkerEndPosition("nznrnfrfntjfmvfwmzdfjlvtqnbhc", 14)).toBe(29);
+    expect(findMarkerEndPosition("nznrnfrfntjfmvfwmzdfjlvtqnbh", 14)).toBe(-1);
   });
 
   it("Part 2", () => {
-    expect(findMarkerPosition(input, 14)).toBe(2472);
+    expect(findMarkerEndPosition(input, 14)).toBe(2472);
   });
 });
 
-function findMarkerPosition(input: string, markerSize = 4) {
-  let markerPostion = markerSize;
-  while (markerPostion < input.length) {
-    const marker = input.substring(markerPostion - markerSize, markerPostion);
-    if (new Set(marker).size === markerSize) {
-      return markerPostion;
+function findMarkerEndPosition(input: string, markerLength = 4) {
+  for (const markerStartPosition of range(0, input.length - markerLength + 1)) {
+    const marker = input.substring(
+      markerStartPosition,
+      markerStartPosition + markerLength
+    );
+    // if all elements in the marker are unique
+    if (new Set(marker).size === markerLength) {
+      return markerStartPosition + markerLength;
     }
-    markerPostion++;
   }
-  return markerPostion;
+  return -1;
 }

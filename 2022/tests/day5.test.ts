@@ -1,4 +1,5 @@
 import fs from "fs/promises";
+import { range } from "./helpers";
 
 const EXAMPLE_INPUT = `
     [D]    
@@ -74,8 +75,20 @@ function parseConfiguration(input: string) {
       },
       { stacks: [], steps: [] } as Configuraton
     );
+
   function isStep(line: string) {
     return line.startsWith("move");
+  }
+
+  function parseStep(line: string): Step {
+    const [, matchQuantity, matchSourceStack, matchTargetStack] = line.match(
+      /move (\d{1,}) from (\d{1,}) to (\d{1,})/
+    ) as RegExpMatchArray;
+    return [
+      parseInt(matchQuantity, 10),
+      parseInt(matchSourceStack, 10) - 1,
+      parseInt(matchTargetStack, 10) - 1,
+    ];
   }
 
   function parseStackRow(line: string) {
@@ -112,17 +125,6 @@ function parseConfiguration(input: string) {
       }
     });
   }
-
-  function parseStep(line: string): Step {
-    const [, matchQuantity, matchSourceStack, matchTargetStack] = line.match(
-      /move (\d{1,}) from (\d{1,}) to (\d{1,})/
-    ) as RegExpMatchArray;
-    return [
-      parseInt(matchQuantity, 10),
-      parseInt(matchSourceStack, 10) - 1,
-      parseInt(matchTargetStack, 10) - 1,
-    ];
-  }
 }
 
 function moveCrates9000(
@@ -132,10 +134,10 @@ function moveCrates9000(
   if (stacks[sourceStack].length < quantity) {
     throw `stack ${sourceStack} doesn't have ${quantity} crates to move`;
   }
-  for (let iterator = 0; iterator < quantity; iterator++) {
+  range(0, quantity).forEach(() => {
     const crate = stacks[sourceStack].pop() as string;
     stacks[targetStack].push(crate);
-  }
+  });
 }
 
 function moveCrates9001(

@@ -1,4 +1,5 @@
 import fs from "fs/promises";
+import { range } from "./helpers";
 
 const EXAMPLE_INPUT = `2-4,6-8
 2-3,4-5
@@ -74,9 +75,5 @@ function parseRange(rangeInput: string) {
   const [startStr, endStr] = rangeInput.split("-");
   const start = parseInt(startStr, 10);
   const end = parseInt(endStr, 10);
-  const range: Array<number> = [];
-  for (let current = start; current <= end; current++) {
-    range.push(current);
-  }
-  return range;
+  return range(start, end - start + 1);
 }
