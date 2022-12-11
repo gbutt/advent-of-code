@@ -1,5 +1,8 @@
+/**
+ * This version solves the puzzle using generator functions a state machine to run the instruction cycles
+ */
 import fs from "fs/promises";
-import { range } from "./helpers";
+import { sum } from "./helpers";
 
 const EXAMPLE_INPUT1 = `addx 15
 addx -11
@@ -151,12 +154,19 @@ noop
 
 interface NoopInstruction {
   operation: "noop";
+  cycles: number;
 }
 interface AddXInstruction {
   operation: "addx";
+  cycles: number;
   value: number;
 }
 type Instruction = NoopInstruction | AddXInstruction;
+
+interface CycleValue {
+  cycle: number;
+  value: number;
+}
 
 const OPERATION_CYCLE_MAP = {
   noop: 1,
@@ -172,7 +182,8 @@ describe("Day 10 - Cathode-Ray Tube", () => {
 
   it("Part 1 - Examples", () => {
     const instructions = parseInstructions(EXAMPLE_INPUT1);
-    expect(sumSignalStrengths(instructions)).toBe(13140);
+    const result = sumSignalStrengths(instructions);
+    expect(result).toBe(13140);
   });
 
   it("Part 1", () => {
@@ -183,30 +194,31 @@ describe("Day 10 - Cathode-Ray Tube", () => {
   it("Part 2 - Example", () => {
     const instructions = parseInstructions(EXAMPLE_INPUT1);
     const screenWidth = 40;
-    const pixels = renderPixels(instructions, screenWidth);
-    const result = drawResult(pixels, screenWidth);
+    const result = drawPixels(instructions, screenWidth);
 
-    expect(result).toBe(`
-##..##..##..##..##..##..##..##..##..##..
-###...###...###...###...###...###...###.
-####....####....####....####....####....
-#####.....#####.....#####.....#####.....
-######......######......######......###.
-#######.......#######.......#######.....`);
+    expect(result).toBe(
+      // prettier-ignore
+      "##..##..##..##..##..##..##..##..##..##..\n" + 
+      "###...###...###...###...###...###...###.\n" + 
+      "####....####....####....####....####....\n" + 
+      "#####.....#####.....#####.....#####.....\n" + 
+      "######......######......######......###.\n" + 
+      "#######.......#######.......#######....."
+    );
   });
   it("Part 2", () => {
     const instructions = parseInstructions(input);
     const screenWidth = 40;
-    const crt = renderPixels(instructions, screenWidth);
-    const result = drawResult(crt, screenWidth);
-
-    expect(result).toBe(`
-####.#..#..##..###..#..#..##..###..#..#.
-...#.#.#..#..#.#..#.#.#..#..#.#..#.#.#..
-..#..##...#....#..#.##...#....#..#.##...
-.#...#.#..#.##.###..#.#..#.##.###..#.#..
-#....#.#..#..#.#.#..#.#..#..#.#.#..#.#..
-####.#..#..###.#..#.#..#..###.#..#.#..#.`);
+    const result = drawPixels(instructions, screenWidth);
+    expect(result).toBe(
+      // prettier-ignore
+      "####.#..#..##..###..#..#..##..###..#..#.\n" +
+      "...#.#.#..#..#.#..#.#.#..#..#.#..#.#.#..\n" +
+      "..#..##...#....#..#.##...#....#..#.##...\n" +
+      ".#...#.#..#.##.###..#.#..#.##.###..#.#..\n" +
+      "#....#.#..#..#.#.#..#.#..#..#.#.#..#.#..\n" +
+      "####.#..#..###.#..#.#..#..###.#..#.#..#."
+    );
   });
 });
 
@@ -216,83 +228,149 @@ function parseInstructions(input: string) {
     .filter((line) => !!line)
     .map((line) => {
       const parts = line.split(" ");
+      const operation = parts[0] as keyof typeof OPERATION_CYCLE_MAP;
+      const value = parts.length > 1 && parseInt(parts[1], 10);
+      const cycles = OPERATION_CYCLE_MAP[operation];
       return {
-        operation: parts[0],
-        value: parts.length > 1 && parseInt(parts[1], 10),
+        operation,
+        value,
+        cycles,
       } as Instruction;
     });
 }
 
+/**
+ * Collects the cycle values at startCycle and every step cycles after until after stopCycle.
+ * @returns sum of calculated signal strengths of all collected cycles.
+ */
 function sumSignalStrengths(
   instructions: Array<Instruction>,
   startCycle = 20,
-  step = 40,
-  iterations = 6
+  stopCycle = 220,
+  step = 40
 ) {
-  const signalStrengthSum = range(startCycle, iterations, step).reduce(
-    (acc, currentCycle) => {
-      const value = determineValueAtCycle(currentCycle, instructions);
-      const signalStrength = value * currentCycle;
-      return acc + signalStrength;
-    },
-    0
+  const yieldedCycles: CycleValue[] = [];
+  for (const cycleValue of runAllInstructions(instructions)) {
+    if (shouldYield(cycleValue.cycle)) {
+      yieldedCycles.push(cycleValue);
+    }
+    if (cycleValue.cycle === stopCycle) {
+      break;
+    }
+  }
+  return sum(...yieldedCycles.map((x) => x.cycle * x.value));
+
+  /** yields at startCycle and every step cycles after */
+  function shouldYield(cycle: number) {
+    // suppress yields before we reach startCycle
+    if (cycle < startCycle) {
+      return false;
+    }
+    return (cycle - startCycle) % step === 0;
+  }
+}
+
+/**
+ * Renders a pixel value for each cycle.
+ * Concatenates pixels into a frame.
+ */
+function drawPixels(instructions: Array<Instruction>, screenWidth: number) {
+  let result = "";
+  for (const { value, cycle } of runAllInstructions(instructions)) {
+    const spritePosition = [value, value + 2] as const;
+    const pixelPosition = cycle % screenWidth;
+    const pixel = renderPixel(spritePosition, pixelPosition);
+    result += (cycle > screenWidth && pixelPosition === 1 ? "\n" : "") + pixel;
+  }
+  return result;
+
+  /** returns "#" if the sprite's range overlaps with the pixel, otherwise returns "." */
+  function renderPixel(
+    spritePosition: readonly [number, number],
+    pixelPosition: number
+  ) {
+    return pixelPosition >= spritePosition[0] &&
+      pixelPosition <= spritePosition[1]
+      ? "#"
+      : ".";
+  }
+}
+
+/**
+ * Generator function that builds a state manchine and cycles until all instructions are consumed.
+ * @yields every cycle it will yield a CycleValue
+ */
+function* runAllInstructions(instructions: Array<Instruction>) {
+  const startValue = 1;
+  const stateMachine = new InstructionCycleStateMachine(
+    instructions,
+    startValue
   );
-  return signalStrengthSum;
+  while (stateMachine.hasInstructions()) {
+    yield stateMachine.runCycle();
+  }
 }
 
-function determineValueAtCycle(
-  endCycle: number,
-  instructions: Array<Instruction>
-) {
-  const startingValue = 1;
-  let currentCycle = 1;
-  let currentValue = startingValue;
-  for (const instruction of instructions) {
-    const cycleTime = OPERATION_CYCLE_MAP[instruction.operation];
-    if (currentCycle + cycleTime > endCycle) {
-      return currentValue;
+class InstructionCycleStateMachine {
+  #instructions: Array<Instruction>;
+  #value: number;
+  #cycle: number;
+  #currentInstruction: Instruction | null;
+  #instructionPointer: number;
+  #currentInstructionCycle: number;
+
+  constructor(instructions: Array<Instruction>, startValue: number) {
+    this.#instructions = instructions;
+    this.#value = startValue;
+    this.#cycle = 0;
+    this.#currentInstruction = null;
+    this.#instructionPointer = 0;
+    this.#currentInstructionCycle = 0;
+  }
+
+  hasInstructions() {
+    return this.#instructionPointer < this.#instructions.length;
+  }
+
+  runCycle(): CycleValue {
+    this.#cycleInstruction();
+    if (this.#currentInstruction === null) {
+      const currentInstruction = this.#instructions[this.#instructionPointer];
+      this.#instructionPointer++;
+      this.#startInstruction(currentInstruction);
     }
-    currentCycle += cycleTime;
+    this.#cycle++;
+    return {
+      cycle: this.#cycle,
+      value: this.#value,
+    };
+  }
+
+  #cycleInstruction() {
+    const instruction = this.#currentInstruction;
+    if (instruction === null) {
+      return;
+    }
+
+    this.#currentInstructionCycle++;
+    if (this.#currentInstructionCycle === instruction.cycles) {
+      this.#finishInstruction(instruction);
+    }
+  }
+
+  #startInstruction(instruction: Instruction) {
+    if (!instruction) {
+      return;
+    }
+    this.#currentInstruction = instruction;
+    this.#currentInstructionCycle = 0;
+  }
+
+  #finishInstruction(instruction: Instruction) {
     if (instruction.operation === "addx") {
-      currentValue += instruction.value;
+      this.#value += instruction.value;
     }
+    this.#currentInstruction = null;
+    this.#currentInstructionCycle = 0;
   }
-  return currentValue;
-}
-
-function renderPixels(instructions: Array<Instruction>, screenWidth: number) {
-  let spritePosition = [1, 3] as [number, number];
-  let currentValue = 1;
-  let currentCycle = 1;
-  const crt: string[] = [];
-  for (const instruction of instructions) {
-    const cycles = OPERATION_CYCLE_MAP[instruction.operation];
-    range(0, cycles).forEach(() => {
-      crt.push(renderPixel(spritePosition, currentCycle));
-      currentCycle = (currentCycle + 1) % screenWidth;
-    });
-    if (instruction.operation === "addx") {
-      currentValue += instruction.value;
-      spritePosition = [currentValue, currentValue + 2];
-    }
-  }
-  return crt;
-}
-
-function renderPixel(spritePosition: [number, number], currentValue: number) {
-  if (spritePosition[0] <= currentValue && spritePosition[1] >= currentValue) {
-    return "#";
-  } else {
-    return ".";
-  }
-}
-
-function drawResult(crt: Array<string>, screenWidth: number) {
-  return crt.reduce((acc, pixel, index) => {
-    if (index % screenWidth === 0) {
-      acc += "\n";
-    }
-    acc += pixel;
-    return acc;
-  }, "");
 }

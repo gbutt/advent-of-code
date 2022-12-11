@@ -29,3 +29,7 @@ export function addVectors<T extends Array<number>>(
     [K in keyof T]: number;
   };
 }
+
+export function sum(...items: number[]) {
+  return items.reduce((sum, item) => sum + item, 0);
+}

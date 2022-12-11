@@ -1,4 +1,5 @@
 import fs from "fs/promises";
+import { sum } from "./helpers";
 
 const GROUP_SIZE = 3;
 const EXAMPLE_INPUT = `vJrwpWtwJgWrhcsFMMfFFhFp
@@ -30,33 +31,25 @@ describe("Day 3 - Rucksack Reorganization", () => {
 
   it("Part 1 - Example", () => {
     const result = determineCompartmentDuplicates(EXAMPLE_INPUT);
-    const resultSum = result.reduce((sum, stats) => {
-      return sum + stats.duplicateItemPriority;
-    }, 0);
+    const resultSum = sum(...result.map((x) => x.duplicateItemPriority));
     expect(resultSum).toBe(157);
   });
 
   it("Part 1", () => {
     const result = determineCompartmentDuplicates(input);
-    const resultSum = result.reduce((sum, stats) => {
-      return sum + stats.duplicateItemPriority;
-    }, 0);
+    const resultSum = sum(...result.map((x) => x.duplicateItemPriority));
     expect(resultSum).toBe(8109);
   });
 
   it("Part 2 - Example", () => {
     const result = determineGroupBadges(EXAMPLE_INPUT);
-    const resultSum = result.reduce((sum, stats) => {
-      return sum + stats.groupBadgeItemPriority;
-    }, 0);
+    const resultSum = sum(...result.map((x) => x.groupBadgeItemPriority));
     expect(resultSum).toBe(70);
   });
 
   it("Part 2", () => {
     const result = determineGroupBadges(input);
-    const resultSum = result.reduce((sum, stats) => {
-      return sum + stats.groupBadgeItemPriority;
-    }, 0);
+    const resultSum = sum(...result.map((x) => x.groupBadgeItemPriority));
     expect(resultSum).toBe(2738);
   });
 });

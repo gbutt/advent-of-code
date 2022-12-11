@@ -1,4 +1,5 @@
 import fs from "fs/promises";
+import { sum } from "./helpers";
 
 const EXAMPLE_INPUT = `1000
 2000
@@ -46,9 +47,7 @@ describe("Day 1 - Calorie Counting", () => {
 function determineMaxCalories(input: string, top = 1) {
   const elfCalorieList = parseCalories(input);
   const sortedCalories = sortCaloriesDesc(elfCalorieList);
-  return sortedCalories
-    .slice(0, top)
-    .reduce((sum, calories) => sum + calories, 0);
+  return sum(...sortedCalories.slice(0, top));
 }
 
 function parseCalories(input: string) {
