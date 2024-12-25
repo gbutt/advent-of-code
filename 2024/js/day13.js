@@ -79,7 +79,7 @@ function determineMachineTokenCost({ buttonA, buttonB, prize }) {
   // 
   const denominator = determinate(buttonA, buttonB);
   if (denominator === 0) {
-    console.log('no solution exists for:', machine);
+    // console.log('no solution exists for:', machine);
     return acc;
   }
   const bPresses = determinate(buttonA, prize) / denominator;
